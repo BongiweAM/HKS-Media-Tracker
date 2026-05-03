@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HKS — Media Content Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --g:#00ff41;--g2:#00c032;--g3:#007a20;--g4:#003d10;
+  --bg:#000000;--bg2:#020a02;--bg3:#050f05;--sur:#0a160a;--sur2:#0f1f0f;
+  --brd:#153015;--brd2:#1f4a1f;--brd3:#2d6a2d;
+  --txt:#00ff41;--txt2:#4a904a;--txt3:#1e4a1e;
+  --red:#ff4444;--amber:#ffaa00;--cyan:#00ffff;
+}
+body{background:var(--bg);color:var(--txt);font-family:'Share Tech Mono',monospace;min-height:100vh;cursor:crosshair}
+canvas#rain{position:fixed;top:0;left:0;width:100%;height:100%;opacity:0.035;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 1.2rem 4rem}
+
+/* HEADER */
+header{
+  text-align:center;padding:2.5rem 1rem 2rem;
+  border-bottom:1px solid var(--brd3);margin-bottom:0;
+  position:relative;
+}
+header::before{
+  content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+  width:200px;height:2px;background:var(--g);box-shadow:0 0 20px var(--g);
+}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap}
+.logo-img{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 0 18px #00ff41) drop-shadow(0 0 36px rgba(0,255,65,0.3))}
+.brand h1{
+  font-family:'Orbitron',monospace;font-size:2.2rem;font-weight:900;
+  color:var(--g);letter-spacing:6px;
+  text-shadow:0 0 20px var(--g),0 0 50px rgba(0,255,65,0.5);
+}
+.brand p{font-size:0.68rem;color:var(--txt2);letter-spacing:4px;margin-top:6px;text-transform:uppercase}
+.sub-title{
+  margin-top:1rem;font-size:0.75rem;color:var(--txt2);letter-spacing:2px;
+  text-transform:uppercase;opacity:0.8;
+}
+.week-display{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:1.2rem;background:var(--sur);border:1px solid var(--brd3);
+  padding:0.45rem 1.2rem;border-radius:2px;font-size:0.8rem;color:var(--txt2);
+}
+.week-display span{color:var(--g);font-weight:700}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* NAV */
+nav{
+  display:flex;gap:0;border:1px solid var(--brd2);margin:2rem 0 1.5rem;
+  overflow:hidden;border-radius:2px;flex-wrap:wrap;
+}
+.nav-btn{
+  flex:1;min-width:120px;background:transparent;border:none;border-right:1px solid var(--brd2);
+  color:var(--txt2);font-family:'Share Tech Mono',monospace;font-size:0.78rem;
+  padding:0.75rem 0.5rem;letter-spacing:2px;cursor:pointer;
+  transition:all 0.2s;text-transform:uppercase;
+}
+.nav-btn:last-child{border-right:none}
+.nav-btn:hover{background:var(--sur2);color:var(--g)}
+.nav-btn.active{background:var(--sur2);color:var(--g);box-shadow:inset 0 -2px 0 var(--g)}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+
+/* STATS BAR */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+.stat-card{
+  background:var(--sur);border:1px solid var(--brd2);padding:1.2rem;
+  border-radius:2px;text-align:center;transition:border-color 0.2s;
+}
+.stat-card:hover{border-color:var(--brd3)}
+.stat-num{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:700;color:var(--g);text-shadow:0 0 10px var(--g)}
+.stat-label{font-size:0.65rem;color:var(--txt2);letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+
+/* SEGMENTS GRID */
+.segments-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem}
+.seg-card{
+  background:var(--sur);border:1px solid var(--brd2);border-radius:2px;overflow:hidden;
+  transition:border-color 0.3s, box-shadow 0.3s;
+}
+.seg-card:hover{border-color:var(--brd3);box-shadow:0 0 20px rgba(0,255,65,0.05)}
+.seg-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 1.2rem;border-bottom:1px solid var(--brd);
+  background:var(--sur2);
+}
+.seg-name{font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--g);letter-spacing:2px}
+.seg-badge{
+  font-size:0.65rem;padding:3px 8px;border-radius:2px;letter-spacing:1px;
+  background:var(--bg3);border:1px solid var(--brd3);color:var(--txt2);
+}
+.seg-progress{height:3px;background:var(--bg3)}
+.seg-progress-fill{height:100%;background:var(--g);box-shadow:0 0 6px var(--g);transition:width 0.5s ease}
+.seg-body{padding:1rem 1.2rem}
+.member-list{list-style:none}
+.member-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.5rem 0;border-bottom:1px solid var(--brd);
+}
+.member-item:last-child{border-bottom:none}
+.member-name{font-size:0.82rem;color:var(--txt)}
+.member-status{
+  display:flex;align-items:center;gap:8px;
+}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.done{background:var(--g);box-shadow:0 0 6px var(--g)}
+.status-dot.pending{background:var(--txt3);border:1px solid var(--brd3)}
+.toggle-btn{
+  background:transparent;border:1px solid var(--brd2);color:var(--txt2);
+  font-family:'Share Tech Mono',monospace;font-size:0.62rem;padding:3px 8px;
+  cursor:pointer;border-radius:2px;transition:all 0.2s;letter-spacing:1px;
+}
+.toggle-btn:hover{background:var(--sur2);color:var(--g);border-color:var(--g)}
+.toggle-btn.done-state{border-color:var(--g3);color:var(--g3)}
+
+/* MEMBERS PAGE */
+.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.member-card{
+  background:var(--sur);border:1px solid var(--brd2);padding:1.2rem;
+  border-radius:2px;transition:all 0.2s;
+}
+.member-card:hover{border-color:var(--brd3)}
+.m-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--sur2);border:1px solid var(--brd3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--g);
+  margin-bottom:0.8rem;
+}
+.m-name{font-size:0.9rem;color:var(--txt);margin-bottom:0.5rem}
+.m-score{font-size:0.7rem;color:var(--txt2);letter-spacing:1px}
+.m-bars{margin-top:0.8rem;display:flex;flex-direction:column;gap:4px}
+.m-bar-row{display:flex;align-items:center;gap:6px;font-size:0.62rem;color:var(--txt2)}
+.m-bar-bg{flex:1;height:3px;background:var(--bg3);border-radius:1px;overflow:hidden}
+.m-bar-fill{height:100%;background:var(--g);transition:width 0.4s}
+.m-bar-fill.pending{background:var(--txt3)}
+
+/* ADD SEGMENT PAGE */
+.add-form{background:var(--sur);border:1px solid var(--brd2);padding:1.5rem;border-radius:2px;max-width:600px}
+.form-group{margin-bottom:1.2rem}
+.form-label{display:block;font-size:0.7rem;color:var(--txt2);letter-spacing:3px;text-transform:uppercase;margin-bottom:0.5rem}
+.form-input{
+  width:100%;background:var(--bg3);border:1px solid var(--brd2);color:var(--txt);
+  font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:0.6rem 0.8rem;
+  border-radius:2px;outline:none;transition:border-color 0.2s;
+}
+.form-input:focus{border-color:var(--brd3)}
+.form-input::placeholder{color:var(--txt3)}
+.members-checkboxes{display:flex;flex-wrap:wrap;gap:0.5rem}
+.cb-label{
+  display:flex;align-items:center;gap:6px;padding:0.4rem 0.8rem;
+  background:var(--bg3);border:1px solid var(--brd);border-radius:2px;
+  cursor:pointer;font-size:0.75rem;transition:all 0.15s;
+}
+.cb-label:hover{border-color:var(--brd3);color:var(--g)}
+.cb-label input{display:none}
+.cb-label.checked{border-color:var(--g3);color:var(--g);background:var(--sur2)}
+.action-btn{
+  background:transparent;border:1px solid var(--g);color:var(--g);
+  font-family:'Share Tech Mono',monospace;font-size:0.8rem;
+  padding:0.65rem 1.5rem;cursor:pointer;border-radius:2px;
+  letter-spacing:2px;text-transform:uppercase;transition:all 0.2s;
+  margin-right:0.8rem;margin-top:0.5rem;
+}
+.action-btn:hover{background:var(--g);color:var(--bg)}
+.action-btn.danger{border-color:var(--red);color:var(--red)}
+.action-btn.danger:hover{background:var(--red);color:var(--bg)}
+
+/* CYCLE TRACKER */
+.cycle-section{margin-bottom:2rem}
+.section-title{
+  font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--g);
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:1rem;
+  padding-bottom:0.5rem;border-bottom:1px solid var(--brd);
+}
+.priority-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+.priority-card{
+  background:var(--sur);border:1px solid var(--amber);border-radius:2px;padding:1rem 1.2rem;
+}
+.priority-card.done-card{border-color:var(--brd2);opacity:0.6}
+.p-member{font-family:'Orbitron',monospace;font-size:0.9rem;color:var(--amber)}
+.p-member.done-p{color:var(--txt2)}
+.p-segments{font-size:0.72rem;color:var(--txt2);margin-top:0.4rem}
+.p-badge{
+  display:inline-block;padding:2px 6px;background:rgba(255,170,0,0.1);
+  border:1px solid rgba(255,170,0,0.3);border-radius:2px;
+  font-size:0.62rem;color:var(--amber);margin:3px 3px 0 0;
+}
+.p-badge.done-badge{background:rgba(0,255,65,0.05);border-color:var(--brd);color:var(--txt3)}
+.no-priority{text-align:center;padding:2rem;color:var(--txt2);font-size:0.8rem;letter-spacing:2px}
+
+/* WEEK CONTROL */
+.week-controls{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+.week-info{flex:1;min-width:200px}
+.week-name{font-family:'Orbitron',monospace;font-size:1.1rem;color:var(--g)}
+.week-num{font-size:0.7rem;color:var(--txt2);letter-spacing:3px;margin-top:3px}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:2rem;right:2rem;z-index:999;
+  background:var(--sur2);border:1px solid var(--brd3);color:var(--g);
+  font-family:'Share Tech Mono',monospace;font-size:0.8rem;
+  padding:0.8rem 1.4rem;border-radius:2px;letter-spacing:1px;
+  transform:translateY(100px);opacity:0;
+  transition:all 0.3s;pointer-events:none;
+  box-shadow:0 0 20px rgba(0,255,65,0.15);
+}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--g4);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--g3)}
+
+/* SCANLINE */
+body::after{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+  pointer-events:none;z-index:999;
+}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .brand h1{font-size:1.5rem;letter-spacing:3px}
+  .logo-img{width:60px;height:60px}
+  nav{flex-direction:column}
+  .nav-btn{border-right:none;border-bottom:1px solid var(--brd2)}
+  .nav-btn:last-child{border-bottom:none}
+}
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="wrap">
+
+<header>
+  <div class="logo-row">
+    <img class="logo-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='black'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='26' font-weight='900' fill='%2300ff41'%3EHKS%3C/text%3E%3C/svg%3E" alt="HKS Logo">
+    <div class="brand">
+      <h1>HKS</h1>
+      <p>Hackers Society · TUT · Media Tracker</p>
+    </div>
+  </div>
+  <p class="sub-title">Bridging the gap between academics and the tech space</p>
+  <div class="week-display">
+    <span class="blink">▮</span>
+    CURRENT WEEK: <span id="current-week-label">Week 1</span>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="showPage('dashboard')">[ Dashboard ]</button>
+  <button class="nav-btn" onclick="showPage('segments')">[ Segments ]</button>
+  <button class="nav-btn" onclick="showPage('cycle')">[ Next Cycle ]</button>
+  <button class="nav-btn" onclick="showPage('members')">[ Members ]</button>
+  <button class="nav-btn" onclick="showPage('manage')">[ Manage ]</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="stats-row" id="stats-row"></div>
+  <div class="segments-grid" id="dashboard-segments"></div>
+</div>
+
+<!-- SEGMENTS DETAIL -->
+<div id="page-segments" class="page">
+  <div class="segments-grid" id="segments-detail"></div>
+</div>
+
+<!-- CYCLE / NEXT WEEK -->
+<div id="page-cycle" class="page">
+  <div class="week-controls">
+    <div class="week-info">
+      <div class="week-name" id="cycle-week-name">Week 1</div>
+      <div class="week-num" id="cycle-week-num">ACTIVE CYCLE</div>
+    </div>
+    <button class="action-btn" onclick="advanceWeek()">[ Advance to Next Week → ]</button>
+    <button class="action-btn danger" onclick="resetWeek()">[ Reset Current Week ]</button>
+  </div>
+  <div class="cycle-section">
+    <div class="section-title">⚠ Priority: Not Done Yet</div>
+    <div class="priority-grid" id="priority-pending"></div>
+  </div>
+  <div class="cycle-section">
+    <div class="section-title">✓ Completed This Cycle</div>
+    <div class="priority-grid" id="priority-done"></div>
+  </div>
+</div>
+
+<!-- MEMBERS -->
+<div id="page-members" class="page">
+  <div class="members-grid" id="members-grid"></div>
+</div>
+
+<!-- MANAGE -->
+<div id="page-manage" class="page">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem">
+    <div>
+      <div class="section-title">Add New Segment</div>
+      <div class="add-form">
+        <div class="form-group">
+          <label class="form-label">Segment Name</label>
+          <input class="form-input" id="new-seg-name" placeholder="e.g. Day in the Life" type="text">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign All Members</label>
+          <div class="members-checkboxes" id="seg-member-checks"></div>
+        </div>
+        <button class="action-btn" onclick="addSegment()">[ + Add Segment ]</button>
+      </div>
+      <div style="margin-top:2rem">
+        <div class="section-title">Remove Segment</div>
+        <div class="add-form">
+          <div class="form-group">
+            <label class="form-label">Select Segment</label>
+            <select class="form-input" id="remove-seg-select"></select>
+          </div>
+          <button class="action-btn danger" onclick="removeSegment()">[ × Remove Segment ]</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">Add New Member</div>
+      <div class="add-form">
+        <div class="form-group">
+          <label class="form-label">Member Name</label>
+          <input class="form-input" id="new-member-name" placeholder="e.g. Zanele" type="text">
+        </div>
+        <button class="action-btn" onclick="addMember()">[ + Add Member ]</button>
+      </div>
+      <div style="margin-top:2rem">
+        <div class="section-title">Remove Member</div>
+        <div class="add-form">
+          <div class="form-group">
+            <label class="form-label">Select Member</label>
+            <select class="form-input" id="remove-member-select"></select>
+          </div>
+          <button class="action-btn danger" onclick="removeMember()">[ × Remove Member ]</button>
+        </div>
+      </div>
+      <div style="margin-top:2rem">
+        <div class="section-title">Week Label</div>
+        <div class="add-form">
+          <div class="form-group">
+            <label class="form-label">Week Name / Label</label>
+            <input class="form-input" id="week-label-input" placeholder="e.g. Week 3 — Tech Edition" type="text">
+          </div>
+          <button class="action-btn" onclick="saveWeekLabel()">[ Save Label ]</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== DATA =====================
+const DEFAULT_STATE = {
+  weekLabel: "Week 1",
+  weekNumber: 1,
+  members: ["Tumelo","Happiness","Kat","Khanyisile","Emmanuel","Tshiamiso","Sunday","Bongi M","Thapelo","Ms Sons","Ofentse"],
+  segments: [
+    {
+      id:"tech-hacks",name:"Tech Hacks",
+      done:["Tumelo","Happiness","Kat"],
+      notDone:["Khanyisile","Emmanuel","Tshiamiso","Sunday","Bongi M","Thapelo","Ms Sons","Ofentse"]
+    },
+    {
+      id:"techie-news",name:"Techie News",
+      done:["Sunday","Tshiamiso","Emmanuel"],
+      notDone:["Tumelo","Bongi M","Ofentse","Happiness","Kat","Ms Sons","Khanyisile","Thapelo"]
+    },
+    {
+      id:"tools-tuesday",name:"Tools Tuesday",
+      done:["Ofentse","Thapelo","Ms Sons","Khanyisile"],
+      notDone:["Bongi M","Sunday","Kat","Emmanuel","Happiness","Tumelo","Tshiamiso"]
+    },
+    {
+      id:"day-in-life",name:"Day in the Life",
+      done:[],
+      notDone:["Tumelo","Happiness","Kat","Khanyisile","Emmanuel","Tshiamiso","Sunday","Bongi M","Thapelo","Ms Sons","Ofentse"]
+    },
+    {
+      id:"grwm",name:"Get Ready With Me",
+      done:[],
+      notDone:["Tumelo","Happiness","Kat","Khanyisile","Emmanuel","Tshiamiso","Sunday","Bongi M","Thapelo","Ms Sons","Ofentse"]
+    }
+  ]
+};
+
+function loadState(){
+  try{
+    const s = localStorage.getItem('hks_media_state');
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_STATE));
+  }catch(e){return JSON.parse(JSON.stringify(DEFAULT_STATE))}
+}
+
+function saveState(){
+  try{localStorage.setItem('hks_media_state',JSON.stringify(state))}catch(e){}
+}
+
+let state = loadState();
+
+// ===================== RENDER =====================
+function getInitials(name){return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)}
+
+function calcMemberStats(member){
+  let done=0,total=0;
+  state.segments.forEach(seg=>{
+    let inDone = seg.done.includes(member);
+    let inNot = seg.notDone.includes(member);
+    if(inDone||inNot){total++;if(inDone)done++}
+  });
+  return{done,total};
+}
+
+function renderDashboard(){
+  const totalSegs=state.segments.length;
+  const totalMembers=state.members.length;
+  let totalDone=0,totalTasks=0;
+  state.segments.forEach(s=>{totalDone+=s.done.length;totalTasks+=s.done.length+s.notDone.length});
+  const pct=totalTasks>0?Math.round((totalDone/totalTasks)*100):0;
+
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card"><div class="stat-num">${totalMembers}</div><div class="stat-label">Members</div></div>
+    <div class="stat-card"><div class="stat-num">${totalSegs}</div><div class="stat-label">Segments</div></div>
+    <div class="stat-card"><div class="stat-num">${totalDone}</div><div class="stat-label">Done</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:${pct>=80?'var(--g)':pct>=50?'var(--amber)':'var(--red)'}">${pct}%</div><div class="stat-label">Completion</div></div>
+  `;
+  document.getElementById('dashboard-segments').innerHTML=renderSegmentCards(true);
+  attachToggleListeners();
+}
+
+function renderSegmentCards(mini=false){
+  return state.segments.map(seg=>{
+    const total=seg.done.length+seg.notDone.length;
+    const pct=total>0?Math.round((seg.done.length/total)*100):0;
+    const allMembers=[...seg.done,...seg.notDone];
+    const memberRows=allMembers.map(m=>`
+      <li class="member-item">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="status-dot ${seg.done.includes(m)?'done':'pending'}"></span>
+          <span class="member-name">${m}</span>
+        </div>
+        <div class="member-status">
+          <button class="toggle-btn ${seg.done.includes(m)?'done-state':''}" 
+            data-seg="${seg.id}" data-member="${m}">
+            ${seg.done.includes(m)?'✓ done':'mark done'}
+          </button>
+        </div>
+      </li>
+    `).join('');
+    return`<div class="seg-card">
+      <div class="seg-header">
+        <span class="seg-name">${seg.name}</span>
+        <span class="seg-badge">${seg.done.length}/${total}</span>
+      </div>
+      <div class="seg-progress"><div class="seg-progress-fill" style="width:${pct}%"></div></div>
+      <div class="seg-body"><ul class="member-list">${memberRows}</ul></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSegmentsPage(){
+  document.getElementById('segments-detail').innerHTML=renderSegmentCards(false);
+  attachToggleListeners();
+}
+
+function attachToggleListeners(){
+  document.querySelectorAll('.toggle-btn[data-seg]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const segId=btn.dataset.seg, member=btn.dataset.member;
+      const seg=state.segments.find(s=>s.id===segId);
+      if(!seg)return;
+      if(seg.done.includes(member)){
+        seg.done=seg.done.filter(m=>m!==member);
+        if(!seg.notDone.includes(member))seg.notDone.push(member);
+        showToast(`${member} marked as NOT done for ${seg.name}`);
+      }else{
+        seg.notDone=seg.notDone.filter(m=>m!==member);
+        if(!seg.done.includes(member))seg.done.push(member);
+        showToast(`${member} marked as DONE for ${seg.name}`);
+      }
+      saveState();
+      renderAll();
+    });
+  });
+}
+
+function renderCycle(){
+  document.getElementById('cycle-week-name').textContent=state.weekLabel;
+  document.getElementById('cycle-week-num').textContent=`WEEK ${state.weekNumber} — ACTIVE CYCLE`;
+  document.getElementById('current-week-label').textContent=state.weekLabel;
+  const pending=[],done=[];
+  state.members.forEach(member=>{
+    const pendingSegs=state.segments.filter(s=>s.notDone.includes(member)).map(s=>s.name);
+    const doneSegs=state.segments.filter(s=>s.done.includes(member)).map(s=>s.name);
+    if(pendingSegs.length>0)pending.push({member,pendingSegs,doneSegs});
+    else if(doneSegs.length>0)done.push({member,pendingSegs,doneSegs});
+  });
+  document.getElementById('priority-pending').innerHTML=pending.length?pending.map(p=>`
+    <div class="priority-card">
+      <div class="p-member">${p.member}</div>
+      <div class="p-segments">Still needs to do:</div>
+      <div>${p.pendingSegs.map(s=>`<span class="p-badge">${s}</span>`).join('')}</div>
+      ${p.doneSegs.length?`<div style="margin-top:6px;font-size:0.62rem;color:var(--txt3)">Done: ${p.doneSegs.join(', ')}</div>`:''}
+    </div>
+  `).join(''):`<div class="no-priority">All members have completed their segments this cycle!</div>`;
+  document.getElementById('priority-done').innerHTML=done.length?done.map(p=>`
+    <div class="priority-card done-card">
+      <div class="p-member done-p">✓ ${p.member}</div>
+      <div>${p.doneSegs.map(s=>`<span class="p-badge done-badge">${s}</span>`).join('')}</div>
+    </div>
+  `).join(''):`<div class="no-priority" style="color:var(--txt3)">No fully completed members yet.</div>`;
+}
+
+function renderMembers(){
+  document.getElementById('members-grid').innerHTML=state.members.map(member=>{
+    const bars=state.segments.map(seg=>{
+      const inDone=seg.done.includes(member),inNot=seg.notDone.includes(member);
+      if(!inDone&&!inNot)return'';
+      return`<div class="m-bar-row">
+        <span style="min-width:80px;overflow:hidden;text-overflow:ellipsis">${seg.name}</span>
+        <div class="m-bar-bg"><div class="m-bar-fill ${inDone?'':'pending'}" style="width:${inDone?100:0}%"></div></div>
+        <span style="min-width:28px">${inDone?'✓':'–'}</span>
+      </div>`;
+    }).join('');
+    const stats=calcMemberStats(member);
+    return`<div class="member-card">
+      <div class="m-avatar">${getInitials(member)}</div>
+      <div class="m-name">${member}</div>
+      <div class="m-score">${stats.done}/${stats.total} segments done</div>
+      <div class="m-bars">${bars}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderManage(){
+  const checks=state.members.map(m=>`
+    <label class="cb-label" id="cb-${m.replace(/\s/g,'_')}">
+      <input type="checkbox" value="${m}" onchange="toggleCb(this)"> ${m}
+    </label>
+  `).join('');
+  document.getElementById('seg-member-checks').innerHTML=checks;
+  const segOpts=state.segments.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  document.getElementById('remove-seg-select').innerHTML=segOpts||'<option value="">No segments</option>';
+  const memOpts=state.members.map(m=>`<option value="${m}">${m}</option>`).join('');
+  document.getElementById('remove-member-select').innerHTML=memOpts||'<option value="">No members</option>';
+  document.getElementById('week-label-input').value=state.weekLabel;
+}
+
+function toggleCb(input){
+  const label=input.closest('.cb-label');
+  if(input.checked)label.classList.add('checked');
+  else label.classList.remove('checked');
+}
+
+function renderAll(){
+  renderDashboard();
+  renderSegmentsPage();
+  renderCycle();
+  renderMembers();
+  renderManage();
+}
+
+// ===================== ACTIONS =====================
+function addSegment(){
+  const name=document.getElementById('new-seg-name').value.trim();
+  if(!name){showToast('Enter a segment name!');return}
+  const checked=[...document.querySelectorAll('#seg-member-checks input:checked')].map(i=>i.value);
+  const notDone=checked.length?checked:[...state.members];
+  const id='seg-'+Date.now();
+  state.segments.push({id,name,done:[],notDone});
+  document.getElementById('new-seg-name').value='';
+  saveState();renderAll();showToast(`Segment "${name}" added!`);
+}
+
+function removeSegment(){
+  const id=document.getElementById('remove-seg-select').value;
+  if(!id){showToast('Select a segment');return}
+  const seg=state.segments.find(s=>s.id===id);
+  if(!seg)return;
+  state.segments=state.segments.filter(s=>s.id!==id);
+  saveState();renderAll();showToast(`Segment "${seg.name}" removed`);
+}
+
+function addMember(){
+  const name=document.getElementById('new-member-name').value.trim();
+  if(!name){showToast('Enter a member name!');return}
+  if(state.members.includes(name)){showToast('Member already exists!');return}
+  state.members.push(name);
+  state.segments.forEach(seg=>{if(!seg.done.includes(name)&&!seg.notDone.includes(name))seg.notDone.push(name)});
+  document.getElementById('new-member-name').value='';
+  saveState();renderAll();showToast(`Member "${name}" added!`);
+}
+
+function removeMember(){
+  const name=document.getElementById('remove-member-select').value;
+  if(!name){showToast('Select a member');return}
+  state.members=state.members.filter(m=>m!==name);
+  state.segments.forEach(seg=>{seg.done=seg.done.filter(m=>m!==name);seg.notDone=seg.notDone.filter(m=>m!==name)});
+  saveState();renderAll();showToast(`Member "${name}" removed`);
+}
+
+function saveWeekLabel(){
+  const label=document.getElementById('week-label-input').value.trim();
+  if(!label){showToast('Enter a week label');return}
+  state.weekLabel=label;
+  saveState();renderAll();showToast('Week label updated!');
+}
+
+function advanceWeek(){
+  if(!confirm(`Advance to Week ${state.weekNumber+1}? This will reset all segment progress.`))return;
+  state.weekNumber++;
+  state.weekLabel=`Week ${state.weekNumber}`;
+  state.segments.forEach(seg=>{
+    seg.notDone=[...seg.done,...seg.notDone];
+    seg.done=[];
+  });
+  saveState();renderAll();showToast(`Advanced to Week ${state.weekNumber}! All segments reset.`);
+}
+
+function resetWeek(){
+  if(!confirm('Reset all progress for the current week?'))return;
+  state.segments.forEach(seg=>{
+    seg.notDone=[...seg.done,...seg.notDone];
+    seg.done=[];
+  });
+  saveState();renderAll();showToast('Week reset — all segments cleared');
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ===================== MATRIX RAIN =====================
+const canvas=document.getElementById('rain');
+const ctx=canvas.getContext('2d');
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+const chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノ';
+let cols=Math.floor(window.innerWidth/14);
+let drops=Array(cols).fill(1);
+function drawRain(){
+  ctx.fillStyle='rgba(0,0,0,0.05)';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#00ff41';ctx.font='12px Share Tech Mono';
+  drops.forEach((y,i)=>{
+    const c=chars[Math.floor(Math.random()*chars.length)];
+    ctx.fillText(c,i*14,y*14);
+    if(y*14>canvas.height&&Math.random()>0.975)drops[i]=0;
+    drops[i]++;
+  });
+}
+setInterval(drawRain,55);
+
+// ===================== INIT =====================
+renderAll();
+</script>
+</body>
+</html>
